@@ -53,6 +53,7 @@
 %%==================================================================
 %% @type mpd_conn() = #mpd_conn{port=port(), version=string()}.
 %% @type mpd_error() = #mpd_error{errorid=string(), position=string(), description=string(), reason=string()}.
+%% @type tag() = artist | album | title | track | genre | disc | date.
 
 
 %%===================================================================
@@ -537,7 +538,7 @@ playlist(C=#mpd_conn{}) ->
     [lists:last(re:split(X, ":", [{parts,2}, {return,binary}])) || X <- L].
 
 %%-------------------------------------------------------------------
-%% @spec (mpd_conn(), Tag::atom(), X::string()) -> list()
+%% @spec (mpd_conn(), Tag::tag(), X::string()) -> list()
 %% @doc
 %% Finds songs in the current playlist with strict matching.
 %% Tag can be artist | album | title | track | genre | disc | date ...
@@ -600,7 +601,7 @@ playlistinfo(C=#mpd_conn{}, PlaylistPos) ->
     parse_song(command(C, "playlistinfo", [integer_to_list(PlaylistPos)])).
 
 %%-------------------------------------------------------------------
-%% @spec (mpd_conn(), Tag::atom(), X::string()) -> list()
+%% @spec (mpd_conn(), Tag::tag(), X::string()) -> list()
 %% @doc
 %% Searches case-sensitively for partial matches in the current playlist.
 %% @end
@@ -798,7 +799,7 @@ save(C=#mpd_conn{}, Name) ->
 %% The music database
 %%===================================================================
 %%-------------------------------------------------------------------
-%% @spec (mpd_conn(), Tag::atom(), X::string()) -> list()
+%% @spec (mpd_conn(), Tag::tag(), X::string()) -> list()
 %% @doc
 %% Counts the number of songs and their total playtime in the db
 %% matching value X for Tag exactly.
@@ -810,14 +811,14 @@ count(C=#mpd_conn{}, Tag, X) ->
         ], parse_pairs(command(C, "count", [atom_to_list(Tag), X]))).
 
 %%-------------------------------------------------------------------
-%% @spec (mpd_conn(), Tag::string(), X::string()) -> list()
+%% @spec (mpd_conn(), Tag::tag(), X::string()) -> list()
 %% @doc
-%% Finds songs in the db that are exactly What. Type should be album,
+%% Finds songs in the db that are exactly What. Tag should be album,
 %% artist, or title. X is what to find.
 %% @end
 %%-------------------------------------------------------------------
-find(C=#mpd_conn{}, Type, X) ->
-    parse_songs(command(C, "find", [Type, X])).
+find(C=#mpd_conn{}, Tag, X) ->
+    parse_songs(command(C, "find", [atom_to_list(Tag), X])).
 
 %%-------------------------------------------------------------------
 %% @spec (mpd_conn(), Type::atom()) -> list()
