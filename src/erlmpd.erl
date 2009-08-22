@@ -162,7 +162,7 @@ currentsong(C=#mpd_conn{}) ->
     convert_props(integer, ['Id', 'Pos', 'Time', 'Track', 'Disc'], Song).
 
 %%-------------------------------------------------------------------
-%% @spec (mpd_conn(), Subsystems::list()) -> list()
+%% @spec (mpd_conn(), Subsystems::[atom()]) -> [atom()]
 %% @doc
 %% Waits until there is a noteworthy change in one or more of MPD's
 %% subsystems. As soon as there is one, it lists all changed subsystems
@@ -186,7 +186,8 @@ currentsong(C=#mpd_conn{}) ->
 idle(C=#mpd_conn{}, Subsystems) ->
     case C#mpd_conn.version >= "0.14" of
         true ->
-            Resp = get_all(changed, command(C, "idle", Subsystems, infinity)),
+            Subs = [atom_to_list(X) || X <- Subsystems],
+            Resp = get_all(changed, command(C, "idle", Subs, infinity)),
             [binary_to_atom(X) || X <- Resp];
         false -> {error, mpd_version}
     end.
