@@ -159,7 +159,7 @@ clearerror(C=#mpd_conn{}) -> parse_none(command(C, "clearerror")).
 %%-------------------------------------------------------------------
 currentsong(C=#mpd_conn{}) ->
     Song = parse_pairs(command(C, "currentsong")),
-    convert_props(integer, ['Id', 'Pos', 'Time', 'Track', 'Disc'], Song).
+    convert_props([{integer, ['Id', 'Pos', 'Time', 'Track', 'Disc']}], Song).
 
 %%-------------------------------------------------------------------
 %% @spec (mpd_conn(), Subsystems::[atom()]) -> [atom()]
@@ -207,29 +207,38 @@ idle(C=#mpd_conn{}) -> idle(C, []).
 %% Reports the current status of the player and the volume level.
 %% Returns a proplist containing a subset of the following:
 %% <ul>
-%%   <li>volume: "0"-"100"</li>
-%%   <li>repeat: "0" or "1"</li>
-%%   <li>single: "0" or "1"</li>
-%%   <li>consume: "0" or "1"</li>
-%%   <li>playlist: integer as list, the playlist version number</li>
-%%   <li>playlistlength: integer as list, the length of the playlist</li>
-%%   <li>state: "play" | "stop" | "pause"</li>
-%%   <li>song: integer as list, playlist song number of the current song
+%%   <li>volume: integer: 0-100</li>
+%%   <li>repeat: boolean</li>
+%%   <li>random: boolean</li>
+%%   <li>single: boolean</li>
+%%   <li>consume: boolean</li>
+%%   <li>playlist: integer: the playlist version number</li>
+%%   <li>playlistlength: integer: the length of the playlist</li>
+%%   <li>state: atom: play | stop | pause</li>
+%%   <li>song: integer: playlist song number of the current song
 %%       stopped on or playing</li>
-%%   <li>songid: integer as list, playlist songid of the current song
+%%   <li>songid: integer: playlist songid of the current song
 %%       stopped on or playing </li>
-%%   <li>time: total time elapsed (of current playing/paused song)</li>
-%%   <li>elapsed: Total time elapsed within the current song, but with
+%%   <li>time: float: total time elapsed (of current playing/paused song)</li>
+%%   <li>elapsed: binary: Total time elapsed within the current song, but with
 %%       higher resolution. </li>
-%%   <li>bitrate: instantaneous bitrate in kbps</li>
-%%   <li>xfade: crossfade in seconds</li>
-%%   <li>audio: sampleRate:bits:channels</li>
-%%   <li>updatings_db: job id</li>
-%%   <li>error: if there is an error, returns message here</li>
+%%   <li>bitrate: integer: instantaneous bitrate in kbps</li>
+%%   <li>xfade: integer: crossfade in seconds</li>
+%%   <li>audio: binary: sampleRate:bits:channels</li>
+%%   <li>updatings_db: integer: job id</li>
+%%   <li>error: binary: if there is an error, returns message here</li>
 %% </ul>
 %% @end
 %%-------------------------------------------------------------------
-status(C=#mpd_conn{}) -> parse_pairs(command(C, "status")).
+status(C=#mpd_conn{}) ->
+    convert_props([
+            {time, [time]},
+            {atom, [state]},
+            {boolean, [repeat, random, single, consume]},
+            {integer, [volume, playlist, playlistlength, song, songid,
+                       bitrate, xfade, updating_db]}
+        ],
+        parse_pairs(command(C, "status"))).
 
 %%-------------------------------------------------------------------
 %% @spec (mpd_conn()) -> list()
@@ -1144,16 +1153,35 @@ convert_to_integer(Val) ->
         true           -> Val
     end.
 
-convert_props(integer, Keys, Data) -> convert_props(integer, Keys, Data, []).
-convert_props(integer, Keys, [{Key,Val}|Data], Converted) ->
+convert_to_time(Val) ->
+    list_to_float(re:replace(Val, ":", ".", [{return,list}])).
+
+convert_to_boolean(Val) ->
+    case Val of
+        X when X == <<"0">>; X == "0", X == 0 -> false;
+        X when X == <<"1">>; X == "1", X == 1 -> true
+    end.
+
+convert_props_to(Type, Keys, Data) -> convert_props_to(Type, Keys, Data, []).
+convert_props_to(Type, Keys, [{Key,Val}|Data], Converted) ->
     case lists:member(Key, Keys) of
         true ->
-            NewVal = convert_to_integer(Val),
-            convert_props(integer, Keys, Data, Converted ++ [{Key,NewVal}]);
+            case Type of
+                integer -> NewVal = convert_to_integer(Val);
+                time    -> NewVal = convert_to_time(Val);
+                boolean -> NewVal = convert_to_boolean(Val);
+                atom    -> NewVal = binary_to_atom(Val)
+            end,
+            convert_props_to(Type, Keys, Data, Converted ++ [{Key, NewVal}]);
         false ->
-            convert_props(integer, Keys, Data, Converted ++ [{Key,Val}])
+            convert_props_to(Type, Keys, Data, Converted ++ [{Key, Val}])
     end;
-convert_props(integer, _Keys, [], Converted) -> Converted.
+convert_props_to(_Type, _Keys, [], Converted) -> Converted.
+
+convert_props(Map, Data) ->
+    lists:foldl(
+        fun({Type,Keys}, Data) -> convert_props_to(Type, Keys, Data) end,
+        Data, Map).
 
 binary_to_atom(Binary) ->
     list_to_atom(binary_to_list(Binary)).
