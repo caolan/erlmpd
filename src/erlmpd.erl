@@ -1151,7 +1151,14 @@ parse_database(List) ->
     end).
 
 parse_outputs(List) ->
-    pass_errors(List, fun(L) -> parse_group([outputid], L) end).
+    pass_errors(List, fun(L) ->
+        lists:map(
+            fun(X) -> convert_props([
+                    {integer, [outputid]},
+                    {boolean, [outputenabled]}
+                ], X)
+            end, parse_group([outputid], L))
+    end).
 
 parse_none(List) -> pass_errors(List, fun(L) -> [] = L, ok end).
 
