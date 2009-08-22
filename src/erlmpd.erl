@@ -192,7 +192,7 @@ idle(C=#mpd_conn{}, Subsystems) ->
     end.
 
 %%-------------------------------------------------------------------
-%% @spec (mpd_conn()) -> list()
+%% @spec (mpd_conn()) -> [atom()]
 %% @doc
 %% Waits until there is a noteworthy change in any of MPD's subsystems.
 %% Same as calling idle(C=#mpd_conn{}, []).
@@ -526,7 +526,7 @@ moveid(C=#mpd_conn{}, From, To) ->
     ])).
 
 %%-------------------------------------------------------------------
-%% @spec (mpd_conn()) -> list()
+%% @spec (mpd_conn()) -> [binary()]
 %% @doc
 %% Displays the current playlist.
 %% <strong>Note:</strong> Do not use this, instead use playlistinfo.
@@ -685,7 +685,7 @@ swapid(C=#mpd_conn{}, SongId1, SongId2) ->
 %% Stored playlists
 %%===================================================================
 %%-------------------------------------------------------------------
-%% @spec (mpd_conn(), Name::string()) -> list()
+%% @spec (mpd_conn(), Name::string()) -> [binary()]
 %% @doc
 %% Lists the files in the playlist Name.m3u.
 %% @end
@@ -1025,7 +1025,7 @@ outputs(C=#mpd_conn{}) -> parse_outputs(command(C, "outputs")).
 %% Reflection
 %%===================================================================
 %%-------------------------------------------------------------------
-%% @spec (mpd_conn()) -> list()
+%% @spec (mpd_conn()) -> [binary()]
 %% @doc
 %% Shows which commands the current user has access to
 %% @end
@@ -1034,7 +1034,7 @@ commands(C=#mpd_conn{}) ->
     get_all(command, command(C, "commands")).
 
 %%-------------------------------------------------------------------
-%% @spec (mpd_conn()) -> list()
+%% @spec (mpd_conn()) -> [binary()]
 %% @doc
 %% Shows which commands the current user does not have access to
 %% @end
@@ -1052,7 +1052,7 @@ tagtypes(C=#mpd_conn{}) ->
     get_all(tagtype, command(C, "tagtypes")).
 
 %%-------------------------------------------------------------------
-%% @spec (mpd_conn()) -> list()
+%% @spec (mpd_conn()) -> [binary()]
 %% @doc
 %% Gets a list of available URL handlers.
 %% @end
