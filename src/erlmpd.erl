@@ -158,8 +158,7 @@ clearerror(C=#mpd_conn{}) -> parse_none(command(C, "clearerror")).
 %% @end
 %%-------------------------------------------------------------------
 currentsong(C=#mpd_conn{}) ->
-    Song = parse_pairs(command(C, "currentsong")),
-    convert_props([{integer, ['Id', 'Pos', 'Time', 'Track', 'Disc']}], Song).
+    convert_song(parse_pairs(command(C, "currentsong"))).
 
 %%-------------------------------------------------------------------
 %% @spec (mpd_conn(), Subsystems::[atom()]) -> [atom()]
@@ -547,7 +546,7 @@ playlist(C=#mpd_conn{}) ->
 %% @end
 %%-------------------------------------------------------------------
 playlistfind(C=#mpd_conn{}, Tag, X) ->
-    parse_pairs(command(C, "playlistfind", [atom_to_list(Tag), X])).
+    parse_song(command(C, "playlistfind", [atom_to_list(Tag), X])).
 
 %%-------------------------------------------------------------------
 %% @spec (mpd_conn()) -> list()
@@ -1130,7 +1129,11 @@ parse_value(Key, List) ->
     pass_errors(parse_pairs(List), fun(L) -> proplists:get_value(Key,L) end).
 
 parse_songs(List) ->
-    pass_errors(List, fun(L) -> parse_group([file], L) end).
+    pass_errors(List, fun(L) ->
+        [convert_song(X) || X <- parse_group([file], L)]
+    end).
+
+parse_song(List) -> convert_song(parse_pairs(List)).
 
 parse_changes(List) ->
     pass_errors(List, fun(L) -> parse_group([cpos], L) end).
@@ -1194,3 +1197,6 @@ convert_props(Map, Data) ->
 
 binary_to_atom(Binary) ->
     list_to_atom(binary_to_list(Binary)).
+
+convert_song(Data) ->
+    convert_props([{integer, ['Id', 'Pos', 'Time', 'Track', 'Disc']}], Data).
