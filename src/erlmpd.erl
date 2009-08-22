@@ -538,13 +538,16 @@ playlist(C=#mpd_conn{}) ->
     [lists:last(re:split(X, ":", [{parts,2}, {return,binary}])) || X <- L].
 
 %%-------------------------------------------------------------------
-%% @spec (mpd_conn(), Tag::string(), X::string()) -> list()
+%% @spec (mpd_conn(), Tag::atom(), X::string()) -> list()
 %% @doc
 %% Finds songs in the current playlist with strict matching.
+%% Tag can be artist | album | title | track | genre | disc | date ...
+%% consiting of an atom representing most song meta tags (including
+%% MUSICBRAINZ data)
 %% @end
 %%-------------------------------------------------------------------
 playlistfind(C=#mpd_conn{}, Tag, X) ->
-    parse_pairs(command(C, "playlistfind", [Tag, X])).
+    parse_pairs(command(C, "playlistfind", [atom_to_list(Tag), X])).
 
 %%-------------------------------------------------------------------
 %% @spec (mpd_conn()) -> list()
