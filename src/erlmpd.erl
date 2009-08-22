@@ -821,15 +821,14 @@ find(C=#mpd_conn{}, Tag, X) ->
     parse_songs(command(C, "find", [atom_to_list(Tag), X])).
 
 %%-------------------------------------------------------------------
-%% @spec (mpd_conn(), Type::atom()) -> list()
+%% @spec (mpd_conn(), Tag::tag()) -> list()
 %% @doc
-%% Lists all tags of the specified type. Type should be album or artist.
+%% Lists all values of the specified tag.
 %% @end
 %%-------------------------------------------------------------------
-list(C=#mpd_conn{}, artist) ->
-    get_all('Artist', command(C, "list artist"));
-list(C=#mpd_conn{}, album) ->
-    get_all('Album', command(C, "list album")).
+list(C=#mpd_conn{}, Tag) ->
+    Results = parse_pairs(command(C, "list", [atom_to_list(Tag)])),
+    [Val || {_Key,Val} <- Results].
 
 %%-------------------------------------------------------------------
 %% @spec (mpd_conn(), album, Artist::string()) -> list()
