@@ -159,9 +159,7 @@ clearerror(C=#mpd_conn{}) -> parse_none(command(C, "clearerror")).
 %%-------------------------------------------------------------------
 currentsong(C=#mpd_conn{}) ->
     Song = parse_pairs(command(C, "currentsong")),
-    convert_props(integer, [
-            <<"Id">>, <<"Pos">>, <<"Time">>, <<"Track">>, <<"Disc">>
-        ], Song).
+    convert_props(integer, ['Id', 'Pos', 'Time', 'Track', 'Disc'], Song).
 
 %%-------------------------------------------------------------------
 %% @spec (mpd_conn(), Subsystems::list()) -> list()
@@ -187,7 +185,7 @@ currentsong(C=#mpd_conn{}) ->
 %%-------------------------------------------------------------------
 idle(C=#mpd_conn{}, Subsystems) ->
     case C#mpd_conn.version >= "0.14" of
-        true -> get_all(<<"changed">>, command(C, "idle", Subsystems, infinity));
+        true -> get_all(changed, command(C, "idle", Subsystems, infinity));
         false -> {error, mpd_version}
     end.
 
@@ -431,7 +429,7 @@ add(C=#mpd_conn{}, Uri) -> parse_none(command(C, "add", [Uri])).
 %% @end
 %%-------------------------------------------------------------------
 addid(C=#mpd_conn{}, Uri) ->
-    parse_value(<<"Id">>, command(C, "addid", [Uri])).
+    parse_value('Id', command(C, "addid", [Uri])).
 
 %%-------------------------------------------------------------------
 %% @spec (mpd_conn(), Uri::string(), Pos::integer()) -> string()
@@ -443,7 +441,7 @@ addid(C=#mpd_conn{}, Uri) ->
 %% @end
 %%-------------------------------------------------------------------
 addid(C=#mpd_conn{}, Uri, Pos) ->
-    parse_value(<<"Id">>, command(C, "addid", [Uri, integer_to_list(Pos)])).
+    parse_value('Id', command(C, "addid", [Uri, integer_to_list(Pos)])).
 
 %%-------------------------------------------------------------------
 %% @spec (mpd_conn()) -> ok
@@ -678,7 +676,7 @@ swapid(C=#mpd_conn{}, SongId1, SongId2) ->
 %% @end
 %%-------------------------------------------------------------------
 listplaylist(C=#mpd_conn{}, Name) ->
-    get_all(<<"file">>, command(C, "listplaylist", [Name])).
+    get_all(file, command(C, "listplaylist", [Name])).
 
 %%-------------------------------------------------------------------
 %% @spec (mpd_conn(), Name::string()) -> list()
@@ -810,9 +808,9 @@ find(C=#mpd_conn{}, Type, X) ->
 %% @end
 %%-------------------------------------------------------------------
 list(C=#mpd_conn{}, artist) ->
-    get_all(<<"Artist">>, command(C, "list artist"));
+    get_all('Artist', command(C, "list artist"));
 list(C=#mpd_conn{}, album) ->
-    get_all(<<"Album">>, command(C, "list album")).
+    get_all('Album', command(C, "list album")).
 
 %%-------------------------------------------------------------------
 %% @spec (mpd_conn(), album, Artist::string()) -> list()
@@ -822,7 +820,7 @@ list(C=#mpd_conn{}, album) ->
 %% @end
 %%-------------------------------------------------------------------
 list(C=#mpd_conn{}, album, Artist) ->
-    get_all(<<"Album">>, command(C, "list album", [Artist])).
+    get_all('Album', command(C, "list album", [Artist])).
 
 %%-------------------------------------------------------------------
 %% @spec (mpd_conn()) -> list()
@@ -1017,7 +1015,7 @@ outputs(C=#mpd_conn{}) -> parse_outputs(command(C, "outputs")).
 %% @end
 %%-------------------------------------------------------------------
 commands(C=#mpd_conn{}) ->
-    get_all(<<"command">>, command(C, "commands")).
+    get_all(command, command(C, "commands")).
 
 %%-------------------------------------------------------------------
 %% @spec (mpd_conn()) -> list()
@@ -1026,7 +1024,7 @@ commands(C=#mpd_conn{}) ->
 %% @end
 %%-------------------------------------------------------------------
 notcommands(C=#mpd_conn{}) ->
-    get_all(<<"command">>, command(C, "notcommands")).
+    get_all(command, command(C, "notcommands")).
 
 %%-------------------------------------------------------------------
 %% @spec (mpd_conn()) -> list()
@@ -1035,7 +1033,7 @@ notcommands(C=#mpd_conn{}) ->
 %% @end
 %%-------------------------------------------------------------------
 tagtypes(C=#mpd_conn{}) ->
-    get_all(<<"tagtype">>, command(C, "tagtypes")).
+    get_all(tagtype, command(C, "tagtypes")).
 
 %%-------------------------------------------------------------------
 %% @spec (mpd_conn()) -> list()
@@ -1044,7 +1042,7 @@ tagtypes(C=#mpd_conn{}) ->
 %% @end
 %%-------------------------------------------------------------------
 urlhandlers(C=#mpd_conn{}) ->
-    get_all(<<"handler">>, command(C, "urlhandlers")).
+    get_all(handler, command(C, "urlhandlers")).
 
 
 
@@ -1087,7 +1085,10 @@ pass_errors(List, Fun) ->
 
 parse_pairs(List) ->
     pass_errors(List, fun(L) ->
-        [list_to_tuple(re:split(X,": ",[{parts,2},{return,binary}])) || X <- L]
+        lists:map(fun(X) ->
+            [Key,Val] = re:split(X, ": ", [{parts,2}, {return,binary}]),
+            {list_to_atom(binary_to_list(Key)), Val}
+        end, L)
     end).
 
 
@@ -1110,21 +1111,21 @@ parse_value(Key, List) ->
     pass_errors(parse_pairs(List), fun(L) -> proplists:get_value(Key,L) end).
 
 parse_songs(List) ->
-    pass_errors(List, fun(L) -> parse_group([<<"file">>], L) end).
+    pass_errors(List, fun(L) -> parse_group([file], L) end).
 
 parse_changes(List) ->
-    pass_errors(List, fun(L) -> parse_group([<<"cpos">>], L) end).
+    pass_errors(List, fun(L) -> parse_group([cpos], L) end).
 
 parse_playlists(List) ->
-    pass_errors(List, fun(L) -> parse_group([<<"playlist">>], L) end).
+    pass_errors(List, fun(L) -> parse_group([playlist], L) end).
 
 parse_database(List) ->
     pass_errors(List, fun(L) ->
-        parse_group([<<"file">>,<<"directory">>, <<"playlist">>], L)
+        parse_group([file, directory, playlist], L)
     end).
 
 parse_outputs(List) ->
-    pass_errors(List, fun(L) -> parse_group(["outputid"], L) end).
+    pass_errors(List, fun(L) -> parse_group([outputid], L) end).
 
 parse_none(List) -> pass_errors(List, fun(L) -> [] = L, ok end).
 
