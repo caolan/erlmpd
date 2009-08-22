@@ -246,17 +246,21 @@ status(C=#mpd_conn{}) ->
 %% Displays statistics.
 %% Returns a proplist containing a subset of the following:
 %% <ul>
-%%   <li>artists: number of artists</li>
-%%   <li>songs: number of albums</li>
-%%   <li>uptime: daemon uptime in seconds</li>
-%%   <li>db_playtime: sum of all song times in the db</li>
-%%   <li>db_update: last db update in UNIX time</li>
-%%   <li>playtime: time length of music played</li>
+%%   <li>artists: integer: number of artists</li>
+%%   <li>albums: integer: number of albums</li>
+%%   <li>songs: integer: number of albums</li>
+%%   <li>uptime: integer: daemon uptime in seconds</li>
+%%   <li>playtime: integer: time length of music played</li>
+%%   <li>db_playtime: integer: sum of all song times in the db</li>
+%%   <li>db_update: integer: last db update in UNIX time</li>
 %% </ul>
 %% @end
 %%-------------------------------------------------------------------
-stats(C=#mpd_conn{}) -> parse_pairs(command(C, "stats")).
-
+stats(C=#mpd_conn{}) ->
+    convert_props([
+            {integer, [artists, albums, songs, uptime, playtime, db_playtime,
+                    db_update]}
+    ], parse_pairs(command(C, "stats"))).
 
 %%===================================================================
 %% Playback options
@@ -1179,9 +1183,11 @@ convert_props_to(Type, Keys, [{Key,Val}|Data], Converted) ->
 convert_props_to(_Type, _Keys, [], Converted) -> Converted.
 
 convert_props(Map, Data) ->
-    lists:foldl(
-        fun({Type,Keys}, Data) -> convert_props_to(Type, Keys, Data) end,
-        Data, Map).
+    pass_errors(Data, fun(L) ->
+        lists:foldl(
+            fun({Type,Keys},Acc) -> convert_props_to(Type, Keys, Acc) end,
+            L, Map)
+    end).
 
 binary_to_atom(Binary) ->
     list_to_atom(binary_to_list(Binary)).
