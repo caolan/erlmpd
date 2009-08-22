@@ -1,0 +1,2 @@
+-record(mpd_conn, {port, version}).
+-record(mpd_error, {errorid, position, description, reason}).

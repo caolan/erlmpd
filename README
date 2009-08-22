@@ -1,0 +1,7 @@
+A simple client library for communicating with MPD (http://mpd.wikia.com) - "a flexible, powerful, server-side application for playing music"
+
+To build just run make, this will create a doc directory which should contain a useful reference to the functions exported by the erlmpd module.
+
+This module was developed on Erlang R13B, should you encounter any problems I'd like to hear from you. Please get in touch via Github, or find me on Twitter at http://twitter.com/caolan
+
+Peace ✌
