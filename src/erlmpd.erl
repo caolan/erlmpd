@@ -908,7 +908,7 @@ search(C=#mpd_conn{}, Tag, What) ->
     parse_songs(command(C, "search", [atom_to_list(Tag), What])).
 
 %%-------------------------------------------------------------------
-%% @spec (mpd_conn()) -> string()
+%% @spec (mpd_conn()) -> integer()
 %% @doc
 %% Updates the music database.
 %% Returns the job id requested for your update, which is displayed in
@@ -916,11 +916,11 @@ search(C=#mpd_conn{}, Tag, What) ->
 %% @end
 %%-------------------------------------------------------------------
 update(C=#mpd_conn{}) ->
-    proplists:get_value("updating_db",
-        parse_pairs(command(C, "update"))).
+    [{_Key, Val}] = parse_pairs(command(C, "update")),
+    convert_to_integer(Val).
 
 %%-------------------------------------------------------------------
-%% @spec (mpd_conn(), Uri::string()) -> string()
+%% @spec (mpd_conn(), Uri::string()) -> integer()
 %% @doc
 %% Updates the music database. Uri is a particular directory or
 %% song/file to update.
@@ -929,8 +929,8 @@ update(C=#mpd_conn{}) ->
 %% @end
 %%-------------------------------------------------------------------
 update(C=#mpd_conn{}, Uri) ->
-    proplists:get_value("updating_db",
-        parse_pairs(command(C, "update", [Uri]))).
+    [{_Key, Val}] = parse_pairs(command(C, "update", [Uri])),
+    convert_to_integer(Val).
 
 
 %%===================================================================
