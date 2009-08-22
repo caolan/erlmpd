@@ -275,7 +275,7 @@ stats(C=#mpd_conn{}) ->
 consume(C=#mpd_conn{}, State)  ->
     case C#mpd_conn.version >= "0.15" of
         true when State == true  -> parse_none(command(C, "consume 1"));
-        true when State == false -> parse_none(command(C, "consume 1"));
+        true when State == false -> parse_none(command(C, "consume 0"));
         false -> {error, mpd_version}
     end.
 
