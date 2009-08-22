@@ -996,22 +996,22 @@ ping(C=#mpd_conn{}) -> parse_none(command(C, "ping")).
 %% Audio output devices
 %%===================================================================
 %%-------------------------------------------------------------------
-%% @spec (mpd_conn(), OutputId::integer()) -> list()
+%% @spec (mpd_conn(), OutputId::integer()) -> ok
 %% @doc
 %% Turns off output with id OutputId
 %% @end
 %%-------------------------------------------------------------------
 disableoutput(C=#mpd_conn{}, OutputId) ->
-    command(C, "disableoutput", [integer_to_list(OutputId)]).
+    parse_none(command(C, "disableoutput", [integer_to_list(OutputId)])).
 
 %%-------------------------------------------------------------------
-%% @spec (mpd_conn(), OutputId::integer()) -> list()
+%% @spec (mpd_conn(), OutputId::integer()) -> ok
 %% @doc
 %% Turns on output with id OutputId
 %% @end
 %%-------------------------------------------------------------------
 enableoutput(C=#mpd_conn{}, OutputId) ->
-    command(C, "enableoutput", [integer_to_list(OutputId)]).
+    parse_none(command(C, "enableoutput", [integer_to_list(OutputId)])).
 
 %%-------------------------------------------------------------------
 %% @spec (mpd_conn()) -> list()
