@@ -157,7 +157,11 @@ clearerror(C=#mpd_conn{}) -> parse_none(command(C, "clearerror")).
 %% identified in status).
 %% @end
 %%-------------------------------------------------------------------
-currentsong(C=#mpd_conn{}) -> parse_pairs(command(C, "currentsong")).
+currentsong(C=#mpd_conn{}) ->
+    Song = parse_pairs(command(C, "currentsong")),
+    convert_props(integer, [
+            <<"Id">>, <<"Pos">>, <<"Time">>, <<"Track">>, <<"Disc">>
+        ], Song).
 
 %%-------------------------------------------------------------------
 %% @spec (mpd_conn(), Subsystems::list()) -> list()
@@ -1128,3 +1132,21 @@ get_all(Key, List) ->
     pass_errors(List, fun(L) ->
         proplists:get_all_values(Key, parse_pairs(L))
     end).
+
+convert_to_integer(Val) ->
+    if
+        is_binary(Val) -> convert_to_integer(binary_to_list(Val));
+        is_list(Val)   -> list_to_integer(Val);
+        true           -> Val
+    end.
+
+convert_props(integer, Keys, Data) -> convert_props(integer, Keys, Data, []).
+convert_props(integer, Keys, [{Key,Val}|Data], Converted) ->
+    case lists:member(Key, Keys) of
+        true ->
+            NewVal = convert_to_integer(Val),
+            convert_props(integer, Keys, Data, Converted ++ [{Key,NewVal}]);
+        false ->
+            convert_props(integer, Keys, Data, Converted ++ [{Key,Val}])
+    end;
+convert_props(integer, _Keys, [], Converted) -> Converted.
