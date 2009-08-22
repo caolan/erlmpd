@@ -444,7 +444,7 @@ add(C=#mpd_conn{}, Uri) -> parse_none(command(C, "add", [Uri])).
 %% @end
 %%-------------------------------------------------------------------
 addid(C=#mpd_conn{}, Uri) ->
-    parse_value('Id', command(C, "addid", [Uri])).
+    convert_to_integer(parse_value('Id', command(C, "addid", [Uri]))).
 
 %%-------------------------------------------------------------------
 %% @spec (mpd_conn(), Uri::string(), Pos::integer()) -> string()
@@ -456,7 +456,8 @@ addid(C=#mpd_conn{}, Uri) ->
 %% @end
 %%-------------------------------------------------------------------
 addid(C=#mpd_conn{}, Uri, Pos) ->
-    parse_value('Id', command(C, "addid", [Uri, integer_to_list(Pos)])).
+    convert_to_integer(
+        parse_value('Id', command(C, "addid", [Uri, integer_to_list(Pos)]))).
 
 %%-------------------------------------------------------------------
 %% @spec (mpd_conn()) -> ok
