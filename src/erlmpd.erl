@@ -560,12 +560,11 @@ playlistid(C=#mpd_conn{}) ->
 %%-------------------------------------------------------------------
 %% @spec (mpd_conn(), Id::integer()) -> list()
 %% @doc
-%% Displays a list of songs in the playlist. Id is optional and
-%% specifies a single song to display info for.
+%% Displays info for song in playlist with specified id.
 %% @end
 %%-------------------------------------------------------------------
 playlistid(C=#mpd_conn{}, Id) ->
-    parse_songs(command(C, "playlistid", [integer_to_list(Id)])).
+    parse_song(command(C, "playlistid", [integer_to_list(Id)])).
 
 %%-------------------------------------------------------------------
 %% @spec (mpd_conn()) -> list()
