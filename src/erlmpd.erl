@@ -185,7 +185,9 @@ currentsong(C=#mpd_conn{}) ->
 %%-------------------------------------------------------------------
 idle(C=#mpd_conn{}, Subsystems) ->
     case C#mpd_conn.version >= "0.14" of
-        true -> get_all(changed, command(C, "idle", Subsystems, infinity));
+        true ->
+            Resp = get_all(changed, command(C, "idle", Subsystems, infinity)),
+            [binary_to_atom(X) || X <- Resp];
         false -> {error, mpd_version}
     end.
 
@@ -1087,7 +1089,7 @@ parse_pairs(List) ->
     pass_errors(List, fun(L) ->
         lists:map(fun(X) ->
             [Key,Val] = re:split(X, ": ", [{parts,2}, {return,binary}]),
-            {list_to_atom(binary_to_list(Key)), Val}
+            {binary_to_atom(Key), Val}
         end, L)
     end).
 
@@ -1151,3 +1153,6 @@ convert_props(integer, Keys, [{Key,Val}|Data], Converted) ->
             convert_props(integer, Keys, Data, Converted ++ [{Key,Val}])
     end;
 convert_props(integer, _Keys, [], Converted) -> Converted.
+
+binary_to_atom(Binary) ->
+    list_to_atom(binary_to_list(Binary)).
