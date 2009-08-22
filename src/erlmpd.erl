@@ -798,14 +798,16 @@ save(C=#mpd_conn{}, Name) ->
 %% The music database
 %%===================================================================
 %%-------------------------------------------------------------------
-%% @spec (mpd_conn(), Tag::string(), X::string()) -> list()
+%% @spec (mpd_conn(), Tag::atom(), X::string()) -> list()
 %% @doc
 %% Counts the number of songs and their total playtime in the db
 %% matching value X for Tag exactly.
 %% @end
 %%-------------------------------------------------------------------
 count(C=#mpd_conn{}, Tag, X) ->
-    parse_pairs(command(C, "count", [Tag, X])).
+    convert_props([
+            {integer, [songs, playtime]}
+        ], parse_pairs(command(C, "count", [atom_to_list(Tag), X]))).
 
 %%-------------------------------------------------------------------
 %% @spec (mpd_conn(), Tag::string(), X::string()) -> list()
