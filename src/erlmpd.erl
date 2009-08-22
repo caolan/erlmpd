@@ -579,7 +579,7 @@ playlistinfo(C=#mpd_conn{}) ->
 %% @spec (mpd_conn(), {Start::integer(), End::integer()}) -> list()
 %% @doc
 %% Displays a list of songs between Start and End positions in the
-%% playlist. Available since MPD 0.15.
+%% playlist (exclusive of end position). Available since MPD 0.15.
 %% @end
 %%-------------------------------------------------------------------
 playlistinfo(C=#mpd_conn{}, {Start, End}) ->
@@ -597,9 +597,7 @@ playlistinfo(C=#mpd_conn{}, {Start, End}) ->
 %% @end
 %%-------------------------------------------------------------------
 playlistinfo(C=#mpd_conn{}, PlaylistPos) ->
-    [H|_] = parse_songs(command(C, "playlistinfo", [
-        integer_to_list(PlaylistPos)])),
-    H.
+    parse_song(command(C, "playlistinfo", [integer_to_list(PlaylistPos)])).
 
 %%-------------------------------------------------------------------
 %% @spec (mpd_conn(), Tag::string(), X::string()) -> list()
