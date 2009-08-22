@@ -718,7 +718,8 @@ listplaylists(C=#mpd_conn{}) ->
 %%-------------------------------------------------------------------
 %% @spec (mpd_conn(), Name::string()) -> ok
 %% @doc
-%% Loads the playlist Name.m3u from the playlist directory.
+%% Loads the playlist Name.m3u from the playlist directory and appends
+%% all tracks to the end of the current playlist.
 %% @end
 %%-------------------------------------------------------------------
 load(C=#mpd_conn{}, Name) ->
