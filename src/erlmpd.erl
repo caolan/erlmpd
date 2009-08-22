@@ -899,14 +899,13 @@ lsinfo(C=#mpd_conn{}, Uri) ->
     parse_database(command(C, "lsinfo", [Uri])).
 
 %%-------------------------------------------------------------------
-%% @spec (mpd_conn(), Type::string(), What::string()) -> list()
+%% @spec (mpd_conn(), Tag::tag(), What::string()) -> list()
 %% @doc
-%% Searches for any song that contains What. Type can be title, artist,
-%% album or filename. Search is not case sensitive.
+%% Searches for any song with a the specified tag's value containing What.
 %% @end
 %%-------------------------------------------------------------------
-search(C=#mpd_conn{}, Type, What) ->
-    parse_songs(command(C, "search", [Type, What])).
+search(C=#mpd_conn{}, Tag, What) ->
+    parse_songs(command(C, "search", [atom_to_list(Tag), What])).
 
 %%-------------------------------------------------------------------
 %% @spec (mpd_conn()) -> string()
