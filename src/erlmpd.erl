@@ -600,13 +600,13 @@ playlistinfo(C=#mpd_conn{}, PlaylistPos) ->
     parse_song(command(C, "playlistinfo", [integer_to_list(PlaylistPos)])).
 
 %%-------------------------------------------------------------------
-%% @spec (mpd_conn(), Tag::string(), X::string()) -> list()
+%% @spec (mpd_conn(), Tag::atom(), X::string()) -> list()
 %% @doc
 %% Searches case-sensitively for partial matches in the current playlist.
 %% @end
 %%-------------------------------------------------------------------
 playlistsearch(C=#mpd_conn{}, Tag, X) ->
-    parse_songs(command(C, "playlistsearch", [Tag, X])).
+    parse_songs(command(C, "playlistsearch", [atom_to_list(Tag), X])).
 
 %%-------------------------------------------------------------------
 %% @spec (mpd_conn(), Ver::integer()) -> list()
