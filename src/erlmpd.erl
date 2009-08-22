@@ -53,8 +53,7 @@
 %%==================================================================
 %% @type mpd_conn() = #mpd_conn{port=port(), version=string()}.
 %% @type mpd_error() = #mpd_error{errorid=string(), position=string(), description=string(), reason=string()}.
-%% @type tag() = artist | album | title | track | genre | disc | date.
-
+%% @type tag() = artist | albumartist | album | title | track | genre | disc | date
 
 %%===================================================================
 %% Exported functions not part of the MPD API
@@ -1044,7 +1043,7 @@ notcommands(C=#mpd_conn{}) ->
     get_all(command, command(C, "notcommands")).
 
 %%-------------------------------------------------------------------
-%% @spec (mpd_conn()) -> list()
+%% @spec (mpd_conn()) -> [binary()]
 %% @doc
 %% Shows a list of available song metadata.
 %% @end
