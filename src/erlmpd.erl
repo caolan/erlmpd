@@ -1143,7 +1143,12 @@ parse_playlists(List) ->
 
 parse_database(List) ->
     pass_errors(List, fun(L) ->
-        parse_group([file, directory, playlist], L)
+        lists:map(fun(X) ->
+            case proplists:is_defined('file', X) of
+                true -> convert_song(X);
+                false -> X
+            end
+        end, parse_group([file, directory, playlist], L))
     end).
 
 parse_outputs(List) ->
@@ -1159,7 +1164,8 @@ get_all(Key, List) ->
 convert_to_integer(Val) ->
     if
         is_binary(Val) -> convert_to_integer(binary_to_list(Val));
-        is_list(Val)   -> list_to_integer(Val);
+        is_list(Val)   -> try list_to_integer(Val)
+                          catch error:_X -> Val end;
         true           -> Val
     end.
 
