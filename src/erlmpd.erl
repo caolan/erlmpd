@@ -1171,7 +1171,7 @@ convert_to_integer(Val) ->
     if
         is_binary(Val) -> convert_to_integer(binary_to_list(Val));
         is_list(Val)   -> try list_to_integer(Val)
-                          catch error:_X -> Val end;
+                          catch error:_X -> list_to_binary(Val) end;
         true           -> Val
     end.
 
