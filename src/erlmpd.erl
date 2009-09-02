@@ -4,7 +4,8 @@
 -include("erlmpd.hrl").
 
 %% Exported functions not part of the MPD API
--export([connect/0, connect/2, connect/3, command/2, command/3, command/4]).
+-export([connect/0, connect/2, connect/3, command/2, command/3, command/4,
+         version/1]).
 
 %% Querying MPD's status
 -export([clearerror/1, currentsong/1, idle/1, idle/2, status/1, stats/1]).
@@ -136,6 +137,15 @@ command(C=#mpd_conn{}, Command, Args) -> command(C, Command, Args, ?TIMEOUT).
 %% @end
 %%-------------------------------------------------------------------
 command(C=#mpd_conn{}, Command) -> command(C, Command, [], ?TIMEOUT).
+
+
+%%-------------------------------------------------------------------
+%% @spec (Connection::mpd_conn()) -> string()
+%% @doc
+%% Returns a string representing the MPD version number for Connection
+%% @end
+%%-------------------------------------------------------------------
+version(C=#mpd_conn{}) -> C#mpd_conn.version.
 
 
 %%===================================================================
