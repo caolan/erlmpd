@@ -19,10 +19,10 @@
 
 %% The current playlist
 -export([add/2, addid/2, addid/3, clear/1, delete/2, deleteid/2,
-         move/3, moveid/3, playlist/1, playlistfind/3, playlistid/1,
-         playlistid/2, playlistinfo/1, playlistinfo/2, playlistsearch/3,
-         plchanges/2, plchangesposid/2, shuffle/2, shuffle/1, swap/3,
-         swapid/3]).
+         deleteids/2, move/3, moveid/3, playlist/1, playlistfind/3,
+         playlistid/1, playlistid/2, playlistinfo/1, playlistinfo/2,
+         playlistsearch/3, plchanges/2, plchangesposid/2, shuffle/2,
+         shuffle/1, swap/3, swapid/3]).
 
 %% Stored playlists
 -export([listplaylist/2, listplaylistinfo/2, listplaylists/1, load/2,
@@ -518,6 +518,17 @@ delete(C=#mpd_conn{}, PlaylistPos) ->
 %%-------------------------------------------------------------------
 deleteid(C=#mpd_conn{}, SongId) ->
     parse_none(command(C, "deleteid", [integer_to_list(SongId)])).
+
+%%-------------------------------------------------------------------
+%% @spec (mpd_conn(), SongIds::[integer()]) -> ok
+%% @doc
+%% Deletes the SongIds from the playlist, more efficient than multiple
+%% calls to deleteid.
+%% @end
+%%-------------------------------------------------------------------
+deleteids(C=#mpd_conn{}, SongIds) ->
+    Commands = [{"deleteid", [integer_to_list(Id)]} || Id <- SongIds],
+    parse_none(commandlist(C, Commands)).
 
 %%-------------------------------------------------------------------
 %% @spec (mpd_conn(), {Start::integer(), End::integer()}, To::integer()) -> ok
