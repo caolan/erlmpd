@@ -5,7 +5,7 @@
 
 %% Exported functions not part of the MPD API
 -export([connect/0, connect/2, connect/3, command/2, command/3, command/4,
-         version/1]).
+         commandlist/3, commandlist/2, version/1]).
 
 %% Querying MPD's status
 -export([clearerror/1, currentsong/1, idle/1, idle/2, status/1, stats/1]).
@@ -116,10 +116,9 @@ connect(Addr, Port, Pass) ->
 %% @end
 %%-------------------------------------------------------------------
 command(C=#mpd_conn{}, Command, Args, Timeout) ->
-    Args2 = [io_lib:format("\"~s\"", [escape_quotes(X)]) || X <- Args],
-    ArgStr = io_lib:format("~s ~s~n", [Command, string:join(Args2, " ")]),
+    CommandStr = format_command(Command, Args),
     %io:format("SENDING: ~p~n", [lists:flatten(ArgStr)]),
-    gen_tcp:send(C#mpd_conn.port, ArgStr),
+    gen_tcp:send(C#mpd_conn.port, CommandStr),
     receive_lines(C#mpd_conn.port, Timeout).
 
 %%-------------------------------------------------------------------
@@ -138,6 +137,31 @@ command(C=#mpd_conn{}, Command, Args) -> command(C, Command, Args, ?TIMEOUT).
 %%-------------------------------------------------------------------
 command(C=#mpd_conn{}, Command) -> command(C, Command, [], ?TIMEOUT).
 
+%%-------------------------------------------------------------------
+%% @spec (mpd_conn(), CommandList::[{Command,Args}], Timeout) -> list()
+%% @doc
+%% To facilitate faster adding of files etc. you can pass a list of
+%% commands all at once using a command list. The return value is whatever
+%% the return for a list of commands is. If a command fails, no more
+%% commands are executed and the appropriate mpd error is returned.
+%% @end
+%%-------------------------------------------------------------------
+commandlist(C=#mpd_conn{}, CommandList, Timeout) ->
+    CmdStrs = [format_command(Cmd,Args) || {Cmd,Args} <- CommandList],
+    %io:format("SENDING: ~p~n", [lists:flatten(ArgStr)]),
+    gen_tcp:send(C#mpd_conn.port, io_lib:format("command_list_begin~n", [])),
+    [gen_tcp:send(C#mpd_conn.port, CmdStr) || CmdStr <- CmdStrs],
+    gen_tcp:send(C#mpd_conn.port, io_lib:format("command_list_end~n", [])),
+    receive_lines(C#mpd_conn.port, Timeout).
+
+%%-------------------------------------------------------------------
+%% @spec (mpd_conn(), CommandList::[{Command,Args}]) -> list()
+%% @doc
+%% Same as calling commandlist(C=#mpd_conn{}, CommandList, ?TIMEOUT)
+%% @end
+%%-------------------------------------------------------------------
+commandlist(C=#mpd_conn{}, CommandList) ->
+    commandlist(C, CommandList, ?TIMEOUT).
 
 %%-------------------------------------------------------------------
 %% @spec (Connection::mpd_conn()) -> string()
@@ -1222,3 +1246,7 @@ binary_to_atom(Binary) ->
 
 convert_song(Data) ->
     convert_props([{integer, ['Id', 'Pos', 'Time', 'Track', 'Disc']}], Data).
+
+format_command(Command, Args) ->
+    Args2 = [io_lib:format("\"~s\"", [escape_quotes(X)]) || X <- Args],
+    io_lib:format("~s ~s~n", [Command, string:join(Args2, " ")]).
