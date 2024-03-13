@@ -33,8 +33,8 @@
 -export([count/3, find/3, list/2, list/3, listall/1, listall/2, listallinfo/1,
          listallinfo/2, lsinfo/1, lsinfo/2, search/3, update/1, update/2]).
 
-%% Stickers (not currently working)
-%% -export([sticker/4, sticker/5, sticker/6]).
+%% Stickers
+-export([sticker/4, sticker/5, sticker/6]).
 
 %% Connection settings
 -export([close/1, kill/1, password/2, ping/1]).
@@ -979,22 +979,22 @@ update(C=#mpd_conn{}, Uri) ->
 
 
 %%===================================================================
-%% Stickers (not currently working)
+%% Stickers
 %%===================================================================
-%%sticker(C=#mpd_conn{}, delete, Type, Uri) ->
-%%        command(C, "sticker delete", [Type, Uri]);
-%%sticker(C=#mpd_conn{}, list, Type, Uri) ->
-%%        command(C, "sticker list", [Type, Uri]).
+sticker(C=#mpd_conn{}, delete, Type, Uri) ->
+        command(C, "sticker delete", [Type, Uri]);
+sticker(C=#mpd_conn{}, list, Type, Uri) ->
+        command(C, "sticker list", [Type, Uri]).
 
-%%sticker(C=#mpd_conn{}, get, Type, Uri, Name) ->
-%%        command(C, "sticker get", [Type, Uri, Name]);
-%%sticker(C=#mpd_conn{}, find, Type, Uri, Name) ->
-%%        command(C, "sticker find", [Type, Uri, Name]);
-%%sticker(C=#mpd_conn{}, delete, Type, Uri, Name) ->
-%%        command(C, "sticker delete", [Type, Uri, Name]).
+sticker(C=#mpd_conn{}, get, Type, Uri, Name) ->
+        command(C, "sticker get", [Type, Uri, Name]);
+sticker(C=#mpd_conn{}, find, Type, Uri, Name) ->
+        command(C, "sticker find", [Type, Uri, Name]);
+sticker(C=#mpd_conn{}, delete, Type, Uri, Name) ->
+        command(C, "sticker delete", [Type, Uri, Name]).
 
-%%sticker(C=#mpd_conn{}, set, Type, Uri, Name, Value) ->
-%%        command(C, "sticker set", [Type, Uri, Name, Value]).
+sticker(C=#mpd_conn{}, set, Type, Uri, Name, Value) ->
+        command(C, "sticker set", [Type, Uri, Name, Value]).
 
 
 %%===================================================================
