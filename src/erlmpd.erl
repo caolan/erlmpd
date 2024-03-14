@@ -1252,9 +1252,6 @@ convert_props(Map, Data) ->
             L, Map)
     end).
 
-binary_to_atom(Binary) ->
-    list_to_atom(binary_to_list(Binary)).
-
 convert_song(Data) ->
     convert_props([{integer, ['Id', 'Pos', 'Time', 'Track', 'Disc']}], Data).
 
