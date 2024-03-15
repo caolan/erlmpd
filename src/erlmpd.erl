@@ -4,7 +4,8 @@
 -include("erlmpd.hrl").
 
 %% Exported functions not part of the MPD API
--export([connect/0, connect/2, connect/3, command/2, command/3, command/4,
+-export([connect/0, connect/2, connect/3, disconnect/1,
+         command/2, command/3, command/4,
          commandlist/3, commandlist/2, version/1]).
 
 %% Querying MPD's status
@@ -116,6 +117,10 @@ connect(Addr, Port, Pass) ->
             end;
         X -> X
     end.
+
+-spec disconnect(C::mpd_conn()) -> ok.
+disconnect(C) ->
+    gen_tcp:close(C#mpd_conn.port).
 
 %%-------------------------------------------------------------------
 %% @doc
