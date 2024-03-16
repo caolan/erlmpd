@@ -1046,8 +1046,10 @@ sticker(C=#mpd_conn{}, find, Type, Uri, Name) ->
 sticker(C=#mpd_conn{}, delete, Type, Uri, Name) ->
         command(C, "sticker delete", [Type, Uri, Name]).
 
+-spec sticker(C::mpd_conn(), set, Type::string(), Uri::string(), Name::string(),
+				Value::string()) -> ok | {error, any_error()}.
 sticker(C=#mpd_conn{}, set, Type, Uri, Name, Value) ->
-        command(C, "sticker set", [Type, Uri, Name, Value]).
+        parse_none(command(C, "sticker set", [Type, Uri, Name, Value])).
 
 
 %%===================================================================
