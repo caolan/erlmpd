@@ -31,8 +31,9 @@
          rename/3, rm/2, save/2]).
 
 %% The music database
--export([count/3, find/3, list/2, list/3, listall/1, listall/2, listallinfo/1,
-         listallinfo/2, lsinfo/1, lsinfo/2, search/3, update/1, update/2]).
+-export([count/3, find/2, find/3, list/2, list/3,
+         listall/1, listall/2, listallinfo/1, listallinfo/2,
+         lsinfo/1, lsinfo/2, search/3, update/1, update/2]).
 
 %% Stickers
 -export([sticker/4, sticker/5, sticker/6]).
@@ -909,6 +910,10 @@ count(C=#mpd_conn{}, Tag, X) ->
 						list() | {error, any_error()}.
 find(C=#mpd_conn{}, Tag, X) ->
     parse_songs(command(C, "find", [atom_to_list(Tag), X])).
+
+-spec find(C::mpd_conn(), Query::string()) -> list() | {error, any_error()}.
+find(C, Query) ->
+    parse_songs(command(C, "find", [Query])).
 
 %%-------------------------------------------------------------------
 %% @doc
