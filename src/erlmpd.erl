@@ -62,6 +62,61 @@
 -type tag()           :: artist | albumartist | album | title | track | genre |
 				disc | date.
 
+-type filter_op() :: eq | ne | contains | starts_with | match | mismatch.
+%% <table cellpadding="2" cellspacing="0" border="1"><thead>
+%% <tr><th>Operator  </th><th>Protocol   </th><th>Description</th></tr>
+%% </thead><tbody>
+%% <tr><td>eq        </td><td>==         </td><td>Test for equality</td></tr>
+%% <tr><td>ne        </td><td>!=         </td>
+%%                        <td>Test for mismatching</td></tr>
+%% <tr><td>contains  </td><td>contains   </td>
+%%                        <td>Test for substring in any location</td></tr>
+%% <tr><td>starts_with</td><td>starts_with</td>
+%%                        <td>Test for substring at begin of value</td></tr>
+%% <tr><td>match     </td><td>match</td>
+%%                        <td>Test for regular expression</td></tr>
+%% <tr><td>mismatch  </td><td>mismatch</td>
+%%                        <td>Negate result of regular expression test</td></tr>
+%% </tbody></table>
+
+-type filter() :: {tagop, tag(), filter_op(), iolist()} |
+                  {fileeq, iolist()} | {base, iolist()} |
+                  {modified_since, iolist()} | {added_since, iolist()} |
+                  {audio_format_eq, iolist()} | {audio_format_match, iolist()} |
+                  {prio_ge, integer()} | {lnot, filter()} | {land, [filter()]}.
+%% A filter specification is a (potentially nested) construction of tuples
+%% consisting of several operators.
+%%
+%% <table cellpadding="2" cellspacing="0" border="1"><thead>
+%% <tr><th>Operator</th><th>Protocol</th><th>Description</th></tr>
+%% </thead><tbody>
+%% <tr><td>tagop</td><td>(TAG OP 'VALUE')</td><td>
+%%               Checks the specified tag against the
+%%               iolist using the specified operator.</td></tr>
+%% <tr><td>fileeq</td><td>(file == 'VALUE')</td><td>
+%%               Match the full song URI</td></tr>
+%% <tr><td>base</td><td>(base 'VALUE')</td><td>
+%%               Restrict the search to songs in the given directory.</td></tr>
+%% <tr><td>modified_since</td><td>(modified-since 'VALUE')</td><td>
+%%               compares the file's time stamp with the given value
+%%               (ISO-8601 or UNIX timestamp)</td></tr>
+%% <tr><td>added_since</td><td>(added-since 'VALUE')</td><td>
+%%               compares the time stamp when the file
+%%               was added (same format as modified-since)</td></tr>
+%% <tr><td>audio_format_eq</td><td>(AudioFormat == 'SAMPLERATE:BITS:CHANNELS')
+%%               </td><td>Compares the audio format</td></tr>
+%% <tr><td>audio_format_match</td><td>(AudioFormat
+%%               =~ 'SAMPLERATE:BITS:CHANNELS')</td>
+%%               <td>Matches the audio format (one or more of the attributes
+%%               may be set to '*' for any)</td></tr>
+%% <tr><td>prio_ge</td><td>(prio >= 42)</td><td>
+%%               compares the priority of queued songs</td></tr>
+%% <tr><td>lnot</td><td>(!(EXPRESSION))</td><td>
+%%               Logical negation of given filter</td></tr>
+%% <tr><td>land</td><td>(EXPRESSION1 AND EXPRESSION 2...)</td><td>
+%%               Logical and of two or more filters</td></tr>
+%% </tbody></table>
+
 %%===================================================================
 %% Exported functions not part of the MPD API
 %%===================================================================
@@ -911,9 +966,14 @@ count(C=#mpd_conn{}, Tag, X) ->
 find(C=#mpd_conn{}, Tag, X) ->
     parse_songs(command(C, "find", [atom_to_list(Tag), X])).
 
--spec find(C::mpd_conn(), Query::string()) -> list() | {error, any_error()}.
-find(C, Query) ->
-    parse_songs(command(C, "find", [Query])).
+%%-------------------------------------------------------------------
+%% @doc
+%% Finds songs in the db that match the given filter.
+%% @end
+%%-------------------------------------------------------------------
+-spec find(C::mpd_conn(), Filter::filter()) -> list() | {error, any_error()}.
+find(C, Filter) ->
+    parse_songs(command(C, "find", [ex_parse(Filter)])).
 
 %%-------------------------------------------------------------------
 %% @doc
@@ -1029,7 +1089,6 @@ update(C=#mpd_conn{}) ->
 update(C=#mpd_conn{}, Uri) ->
     [{_Key, Val}] = parse_pairs(command(C, "update", [Uri])),
     convert_to_integer(Val).
-
 
 %%===================================================================
 %% Stickers
@@ -1310,3 +1369,43 @@ convert_song(Data) ->
 format_command(Command, Args) ->
     Args2 = [io_lib:format("\"~s\"", [escape_quotes(X)]) || X <- Args],
     io_lib:format("~s ~s~n", [Command, string:join(Args2, " ")]).
+
+% FILTER expressions
+ex_parse(Expr) ->
+    lists:flatten(ex_parse_inner(Expr)).
+
+ex_parse_inner({tagop, Tag, Op, Value})     -> ex_tagop(Tag, Op, Value);
+ex_parse_inner({fileeq, Value})             -> ex_fileeq(Value);
+ex_parse_inner({base, Value})               -> ex_base(Value);
+ex_parse_inner({modified_since, Value})     -> ex_modified_since(Value);
+ex_parse_inner({added_since, Value})        -> ex_added_since(Value);
+ex_parse_inner({audio_format_eq, Value})    -> ex_audio_format_eq(Value);
+ex_parse_inner({audio_format_match, Value}) -> ex_audio_format_match(Value);
+ex_parse_inner({prio_ge, Num})              -> ex_prio_ge(Num);
+ex_parse_inner({lnot, Expr})                -> ex_not(ex_parse_inner(Expr));
+ex_parse_inner({land, Exprlist})            -> ex_and([ex_parse_inner(Ex) ||
+                                                       Ex <- Exprlist]).
+
+ex_tagop(Tag, OP, Value) ->
+    ["(", atom_to_list(Tag), case OP of
+        eq          -> "==";
+        ne          -> "!=";
+        contains    -> "contains";
+        starts_with -> "starts_with";
+        match       -> "=~";
+        mismatch    -> "!~"
+    end, ex_quote(Value), ")"].
+
+ex_quote(Value) ->
+    io_lib:format("\"~s\"", [string:replace(escape_quotes(Value),
+                                            "'", "\\'", all)]).
+
+ex_fileeq(Value)             -> ["(file == ",        ex_quote(Value), ")"].
+ex_base(Value)               -> ["(base ",           ex_quote(Value), ")"].
+ex_modified_since(Value)     -> ["(modified-since ", ex_quote(Value), ")"].
+ex_added_since(Value)        -> ["(added-since ",    ex_quote(Value), ")"].
+ex_audio_format_eq(Value)    -> ["(AudioFormat == ", ex_quote(Value), ")"].
+ex_audio_format_match(Value) -> ["(AudioFormat =~ ", ex_quote(Value), ")"].
+ex_prio_ge(Value)            -> ["(prio >= ", integer_to_list(Value), ")"].
+ex_not(Expr)                 -> ["(!", Expr, ")"].
+ex_and(Expr)                 -> ["(", lists:join(" AND ", Expr), ")"].
