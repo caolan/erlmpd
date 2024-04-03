@@ -1170,13 +1170,8 @@ urlhandlers(C=#mpd_conn{}) ->
 %% Internal Functions
 %%===================================================================
 
-escape_quotes(X) -> escape_quotes(X, []).
-escape_quotes([H|T],S) ->
-    case H of
-        $" -> escape_quotes(T, S ++ ["\\\""]);
-        X  -> escape_quotes(T, S ++ [X])
-    end;
-escape_quotes([], X) -> X.
+escape_quotes(X) ->
+    string:replace(string:replace(X, "\\", "\\\\", all), "\"", "\\\"", all).
 
 receive_lines(Sock, Timeout) -> receive_lines(Sock, Timeout, []).
 receive_lines(Sock, Timeout, L) ->
