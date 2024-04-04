@@ -36,7 +36,8 @@
          lsinfo/1, lsinfo/2, search/3, update/1, update/2]).
 
 %% Stickers
--export([sticker/4, sticker/5, sticker/6]).
+-export([sticker_delete/3, sticker_delete/4, sticker_list/3, sticker_get/4,
+         sticker_find/4, sticker_set/5]).
 
 %% Connection settings
 -export([close/1, kill/1, password/2, ping/1]).
@@ -1093,22 +1094,70 @@ update(C=#mpd_conn{}, Uri) ->
 %%===================================================================
 %% Stickers
 %%===================================================================
-sticker(C=#mpd_conn{}, delete, Type, Uri) ->
-        command(C, "sticker delete", [Type, Uri]);
-sticker(C=#mpd_conn{}, list, Type, Uri) ->
-        command(C, "sticker list", [Type, Uri]).
 
-sticker(C=#mpd_conn{}, get, Type, Uri, Name) ->
-        command(C, "sticker get", [Type, Uri, Name]);
-sticker(C=#mpd_conn{}, find, Type, Uri, Name) ->
-        command(C, "sticker find", [Type, Uri, Name]);
-sticker(C=#mpd_conn{}, delete, Type, Uri, Name) ->
-        command(C, "sticker delete", [Type, Uri, Name]).
+%%-------------------------------------------------------------------
+%% @doc
+%% Delete all stickers associated to the given type and URI.
+%% @end
+%%-------------------------------------------------------------------
+sticker_delete(C=#mpd_conn{}, Type, Uri) ->
+    command(C, "sticker delete", [Type, Uri]).
 
--spec sticker(C::mpd_conn(), set, Type::string(), Uri::string(), Name::string(),
+%%-------------------------------------------------------------------
+%% @doc
+%% Retrieve all stickers associated to the given type and URI.
+%% @end
+%%-------------------------------------------------------------------
+-spec sticker_list(C::mpd_conn(), Type::string(), Uri::string()) ->
+				[{atom(), string()}] | {error, any_error()}.
+sticker_list(C=#mpd_conn{}, Type, Uri) ->
+    parse_stickers_line(command(C, "sticker list", [Type, Uri])).
+
+%%-------------------------------------------------------------------
+%% @doc
+%% Get value of specific sticker by Type, URI and Name.
+%% @end
+%%-------------------------------------------------------------------
+-spec sticker_get(C::mpd_conn(), Type::string(), Uri::string(),
+			Name::string()) -> string() | {error, any_error()}.
+sticker_get(C=#mpd_conn{}, Type, Uri, Name) ->
+    pass_errors(
+        parse_stickers_line(command(C, "sticker get", [Type, Uri, Name])),
+        fun([{_Key, Val}]) -> Val end
+    ).
+
+%%-------------------------------------------------------------------
+%% @doc
+%% Search for stickers of the specified type and name below the
+%% specified URI prefix (can be empty to retrieve all stickers).
+%%
+%% Upon success, a list of property lists is returned. Each inner
+%% list contains one key (file) to identify the URI and all the
+%% associated key-value pairs as parsed from the stickers. 
+%% @end
+%%-------------------------------------------------------------------
+-spec sticker_find(C::mpd_conn(), Type::string(), Uri::string(),
+	Name::string()) -> [[{atom(), string()}]] | {error, any_error()}.
+sticker_find(C=#mpd_conn{}, Type, Uri, Name) ->
+    parse_stickers(command(C, "sticker find", [Type, Uri, Name])).
+
+%%-------------------------------------------------------------------
+%% @doc
+%% Delete specific sticker by Type, URI and Name.
+%% @end
+%%-------------------------------------------------------------------
+sticker_delete(C=#mpd_conn{}, Type, Uri, Name) ->
+    command(C, "sticker delete", [Type, Uri, Name]).
+
+%%-------------------------------------------------------------------
+%% @doc
+%% Assign sticker value by Type, URI and Name.
+%% @end
+%%-------------------------------------------------------------------
+-spec sticker_set(C::mpd_conn(), Type::string(), Uri::string(), Name::string(),
 				Value::string()) -> ok | {error, any_error()}.
-sticker(C=#mpd_conn{}, set, Type, Uri, Name, Value) ->
-        parse_none(command(C, "sticker set", [Type, Uri, Name, Value])).
+sticker_set(C=#mpd_conn{}, Type, Uri, Name, Value) ->
+    parse_none(command(C, "sticker set", [Type, Uri, Name, Value])).
 
 
 %%===================================================================
@@ -1286,6 +1335,27 @@ parse_value(Key, List) ->
 parse_songs(List) ->
     pass_errors(List, fun(L) ->
         [convert_song(X) || X <- parse_group([file], L)]
+    end).
+
+parse_stickers(List) ->
+    GRP = parse_group([file], List),
+    pass_errors(GRP, fun(GRPi) ->
+        [[{file, proplists:get_value(file, L)}|
+         parse_stickers_value(proplists:get_value(sticker, L))] || L <- GRPi]
+    end).
+
+parse_stickers_value(Value) ->
+    [parse_sticker(string:split(KV, "=")) || KV <- string:split(Value, " ")].
+
+parse_sticker([Key|[Value|[]]]) when is_list(Key) ->
+    {list_to_atom(Key), Value};
+parse_sticker([Key|[Value|[]]]) when is_binary(Key) ->
+    {binary_to_atom(Key), Value}.
+
+parse_stickers_line(Line) ->
+    pass_errors(Line, fun([LineI]) ->
+        [_ConstSticker|[Stickers|[]]] = string:split(LineI, ": "),
+        parse_stickers_value(Stickers)
     end).
 
 parse_song(List) -> convert_song(parse_pairs(List)).
