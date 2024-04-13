@@ -300,7 +300,7 @@ idle(C=#mpd_conn{}, Subsystems) ->
         true ->
             Subs = [atom_to_list(X) || X <- Subsystems],
             Resp = get_all(changed, command(C, "idle", Subs, infinity)),
-            [binary_to_atom(X) || X <- Resp];
+            pass_errors(Resp, fun(R) -> [binary_to_atom(X) || X <- R] end);
         false -> {error, mpd_version}
     end.
 
