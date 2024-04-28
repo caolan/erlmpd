@@ -31,7 +31,7 @@
          rename/3, rm/2, save/2]).
 
 %% The music database
--export([count/3, find/2, find/3, list/2, list/3,
+-export([count/2, count/3, count_group/3, find/2, find/3, list/2, list/3,
          listall/1, listall/2, listallinfo/1, listallinfo/2,
          lsinfo/1, lsinfo/2, search/3, update/1, update/2]).
 
@@ -946,6 +946,17 @@ save(C=#mpd_conn{}, Name) ->
 %%-------------------------------------------------------------------
 %% @doc
 %% Counts the number of songs and their total playtime in the db
+%% matching the filter
+%% @end
+%%-------------------------------------------------------------------
+-spec count(C::mpd_conn(), Filter::filter()) -> list() | {error, any_error()}.
+count(C=#mpd_conn{}, Filter) ->
+    convert_props([{integer, [songs, playtime]}],
+        parse_pairs(command(C, "count", [ex_parse(Filter)]))).
+
+%%-------------------------------------------------------------------
+%% @doc
+%% Counts the number of songs and their total playtime in the db
 %% matching value X for Tag exactly.
 %% @end
 %%-------------------------------------------------------------------
@@ -955,6 +966,33 @@ count(C=#mpd_conn{}, Tag, X) ->
     convert_props([
             {integer, [songs, playtime]}
         ], parse_pairs(command(C, "count", [atom_to_list(Tag), X]))).
+
+%%-------------------------------------------------------------------
+%% @doc
+%% Counts the number of songs and their total playtime in the db
+%% for all songs matching the given filter and groups by the given
+%% tag.
+%%
+%% Example: erlmpd:count_group(Conn, artist, {base, ""}).
+%% returns a list like this:
+%% [
+%% 	[{'Artist',<<"Ace Of Base">>},{songs,13},{playtime,2944}],
+%% 	[{'Artist',<<"Adele">>},{songs,1},{playtime,286}],
+%% 	[{'Artist',<<"Alan Silvestri">>},{songs,1},{playtime,164}]
+%% ]
+%% @end
+%%-------------------------------------------------------------------
+-spec count_group(C::mpd_conn(), Tag::tag(), Filter::filter()) ->
+						list() | {error, any_error()}.
+count_group(C=#mpd_conn{}, Tag, Filter) ->
+	TagL = atom_to_list(Tag),
+	TagU = case Tag of
+		albumartist -> 'AlbumArtist';
+		_Other      -> list_to_atom(string:titlecase(TagL))
+	end,
+	[convert_props([{integer, [songs, playtime]}], LE) ||
+				LE <- parse_group([TagU], command(C, "count",
+					[ex_parse(Filter), "group", TagL]))].
 
 %%-------------------------------------------------------------------
 %% @doc
