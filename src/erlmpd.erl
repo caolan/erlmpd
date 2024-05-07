@@ -9,7 +9,8 @@
          commandlist/3, commandlist/2, version/1]).
 
 %% Querying MPD's status
--export([clearerror/1, currentsong/1, idle/1, idle/2, status/1, stats/1]).
+-export([clearerror/1, currentsong/1, idle/1, idle/2,
+         noidle/1, idle_send/2, idle_receive/1, status/1, stats/1]).
 
 %% Playback options
 -export([consume/2, crossfade/2, random/2, repeat/2, setvol/2, single/2]).
@@ -290,19 +291,18 @@ currentsong(C=#mpd_conn{}) ->
 %%   <li>output: an audio output has been enabled or disabled</li>
 %%   <li>options: options like repeat, random, crossfade</li>
 %% </ul>
+%%
+%% This call is equivalent to calling idle_send/2 and idle_receive/1
+%% in sequence. See their respective documentations for why it might
+%% make sense to rely on those functions directly in certain cases.
+%%
 %% Available since MPD 0.14.
 %% @end
 %%-------------------------------------------------------------------
 -spec idle(C::mpd_conn(), Subsystems::[atom()]) ->
-					[atom()] | {error, mpd_version}.
+			[atom()] | {error, mpd_version | network_error()}.
 idle(C=#mpd_conn{}, Subsystems) ->
-    case C#mpd_conn.version >= "0.14" of
-        true ->
-            Subs = [atom_to_list(X) || X <- Subsystems],
-            Resp = get_all(changed, command(C, "idle", Subs, infinity)),
-            pass_errors(Resp, fun(R) -> [binary_to_atom(X) || X <- R] end);
-        false -> {error, mpd_version}
-    end.
+    pass_errors(idle_send(C, Subsystems), fun(_R) -> idle_receive(C) end).
 
 %%-------------------------------------------------------------------
 %% @doc
@@ -312,6 +312,56 @@ idle(C=#mpd_conn{}, Subsystems) ->
 %%-------------------------------------------------------------------
 -spec idle(C::mpd_conn()) -> [atom()] | {error, mpd_version}.
 idle(C=#mpd_conn{}) -> idle(C, []).
+
+%%-------------------------------------------------------------------
+%% @doc
+%% Interrupts an ongoing idle call and makes it return.
+%% In order for this to work reliably, it must only be called
+%% after idle_send/2 has completed. Since it can be hard to ensure
+%% this ordering when using the idle/2 and idle/1 calls alone, users
+%% of this API function are advised to keep track of the state of
+%% the connection by using the more fine-grained idle invocations
+%% provided by the idle_send/2 and idle_receive/1 APIs.
+%% @end
+%%-------------------------------------------------------------------
+-spec noidle(C::mpd_conn()) -> ok | {error, network_error()}.
+noidle(C=#mpd_conn{}) -> command(C, "noidle").
+
+%%-------------------------------------------------------------------
+%% @doc
+%% Sends an idle command to MPD but does not wait for its response.
+%% The next call to the API should be idle_receive/1 or noidle/1.
+%%
+%% Having two separate functions in place of the convenience idle/2
+%% allows keeping track of what is being sent over the TCP channel
+%% because that is what matters to MPD. Specifically, if you want to
+%% asynchronously cancel an idle command with noidle, you MUST
+%% ensure that idle_send/2 was called before the noidle! The best
+%% way to establish this is to assume that the idle command was sent
+%% as soon as idle_send/2 returns, thus the utility of this function.
+%% @end
+%%-------------------------------------------------------------------
+-spec idle_send(C::mpd_conn(), Subsystems::[atom()]) ->
+				ok | {error, mpd_version | network_error()}.
+idle_send(C=#mpd_conn{}, Subsystems) ->
+    case C#mpd_conn.version >= "0.14" of
+        true ->
+            Subs = [atom_to_list(X) || X <- Subsystems],
+            gen_tcp:send(C#mpd_conn.port, format_command("idle", Subs));
+        false -> {error, mpd_version}
+    end.
+
+%%-------------------------------------------------------------------
+%% @doc
+%% Completes an idle command started with idle_send/2 by waiting
+%% for the response from MPD. Note that this wait is indefinite
+%% (no timeout)
+%% @end
+%%-------------------------------------------------------------------
+-spec idle_receive(C::mpd_conn()) -> [atom()] | {error, network_error()}.
+idle_receive(C=#mpd_conn{}) ->
+    Resp = get_all(changed, receive_lines(C#mpd_conn.port, infinity)),
+    pass_errors(Resp, fun(R) -> [binary_to_atom(X) || X <- R] end).
 
 %%-------------------------------------------------------------------
 %% @doc
