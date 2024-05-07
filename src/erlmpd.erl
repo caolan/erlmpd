@@ -976,9 +976,9 @@ count(C=#mpd_conn{}, Tag, X) ->
 %% Example: erlmpd:count_group(Conn, artist, {base, ""}).
 %% returns a list like this:
 %% [
-%% 	[{'Artist',<<"Ace Of Base">>},{songs,13},{playtime,2944}],
-%% 	[{'Artist',<<"Adele">>},{songs,1},{playtime,286}],
-%% 	[{'Artist',<<"Alan Silvestri">>},{songs,1},{playtime,164}]
+%% 	[{'Artist',&lt;&lt;"Ace Of Base"&gt;&gt;},{songs,13},{playtime,2944}],
+%% 	[{'Artist',&lt;&lt;"Adele"&gt;&gt;},{songs,1},{playtime,286}],
+%% 	[{'Artist',&lt;&lt;"Alan Silvestri"&gt;&gt;},{songs,1},{playtime,164}]
 %% ]
 %% @end
 %%-------------------------------------------------------------------
