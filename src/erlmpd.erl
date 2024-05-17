@@ -20,8 +20,8 @@
          seek/3, seekid/3, stop/1]).
 
 %% The current playlist
--export([add/2, addid/2, addid/3, clear/1, delete/2, deleteid/2,
-         deleteids/2, move/3, moveid/3, playlist/1, playlistfind/3,
+-export([add/2, addid/2, addid/3, addid_relative/3, clear/1, delete/2,
+         deleteid/2, deleteids/2, move/3, moveid/3, playlist/1, playlistfind/3,
          playlistid/1, playlistid/2, playlistinfo/1, playlistinfo/2,
          playlistsearch/3, plchanges/2, plchangesposid/2, shuffle/2,
          shuffle/1, swap/3, swapid/3]).
@@ -626,6 +626,21 @@ addid(C=#mpd_conn{}, Uri) ->
 addid(C=#mpd_conn{}, Uri, Pos) ->
     convert_to_integer(
         parse_value('Id', command(C, "addid", [Uri, integer_to_list(Pos)]))).
+
+%%-------------------------------------------------------------------
+%% @doc
+%% Like addid, but always interprets Pos as an offset relative
+%% to the currently playing song. Use Pos = 0 to add an entry right
+%% after the currently playing song.
+%% @end
+%%-------------------------------------------------------------------
+-spec addid_relative(C::mpd_conn(), Uri::string(), Pos::integer()) ->
+				integer() | binary() | {error, any_error()}.
+addid_relative(C=#mpd_conn{}, Uri, Pos) when Pos < 0 ->
+    addid(C, Uri, Pos);
+addid_relative(C=#mpd_conn{}, Uri, Pos) ->
+    convert_to_integer(parse_value('Id',
+        command(C, "addid", [Uri, io_lib:format("+~w", [Pos])]))).
 
 %%-------------------------------------------------------------------
 %% @doc
