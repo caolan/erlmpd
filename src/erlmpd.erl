@@ -831,8 +831,7 @@ plchanges(C=#mpd_conn{}, Ver) ->
 -spec plchangesposid(C::mpd_conn(), Ver::integer()) ->
 						list() | {error, any_error()}.
 plchangesposid(C=#mpd_conn{}, Ver) ->
-    parse_changes(
-        command(C, "plchangesposid", [integer_to_list(Ver)])).
+    parse_group([cpos], command(C, "plchangesposid", [integer_to_list(Ver)])).
 
 %%-------------------------------------------------------------------
 %% @doc
@@ -919,7 +918,7 @@ listplaylistinfo(C=#mpd_conn{}, Name) ->
 %%-------------------------------------------------------------------
 -spec listplaylists(C::mpd_conn()) -> list() | {error, any_error()}.
 listplaylists(C=#mpd_conn{}) ->
-    parse_playlists(command(C, "listplaylists")).
+    parse_group([playlist], command(C, "listplaylists")).
 
 %%-------------------------------------------------------------------
 %% @doc
@@ -1462,12 +1461,6 @@ parse_stickers_line(Line) ->
     end).
 
 parse_song(List) -> convert_song(parse_pairs(List)).
-
-parse_changes(List) ->
-    pass_errors(List, fun(L) -> parse_group([cpos], L) end).
-
-parse_playlists(List) ->
-    pass_errors(List, fun(L) -> parse_group([playlist], L) end).
 
 parse_database(List) ->
     pass_errors(List, fun(L) ->
