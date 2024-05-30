@@ -43,6 +43,10 @@
 %% Connection settings
 -export([close/1, kill/1, password/2, ping/1]).
 
+%% Partition commands
+-export([partition/2, listpartitions/1, newpartition/2, delpartition/2,
+         moveoutput/2]).
+
 %% Audio output devices
 -export([disableoutput/2, enableoutput/2, outputs/1]).
 
@@ -1302,6 +1306,61 @@ password(C=#mpd_conn{}, Password) ->
 ping(C=#mpd_conn{}) ->
     parse_none(command(C, "ping")).
 
+%%===================================================================
+%% Partition commands
+%%===================================================================
+%%-------------------------------------------------------------------
+%% @doc
+%% Switch the client to a different partition.
+%% @end
+%%-------------------------------------------------------------------
+-spec partition(C::mpd_conn(), Name::string()) -> ok | {error, any_error()}.
+partition(C=#mpd_conn{}, Name) ->
+    parse_none(command(C, "partition", [Name])).
+
+%%-------------------------------------------------------------------
+%% @doc
+%% Query the list of partitions. Returns a list of proplists each of
+%% which at least contain property partition to identify the name
+%% of the partition. Other properties may exist to contain
+%% information about the partition (as per the MPD protocol spec).
+%%
+%% Example return value: [[{partition,<<"default">>}]]
+%% @end
+%%-------------------------------------------------------------------
+-spec listpartitions(C::mpd_conn()) -> [list()] | {error, any_error()}.
+listpartitions(C=#mpd_conn{}) ->
+    parse_group([partition], command(C, "listpartitions")).
+
+%%-------------------------------------------------------------------
+%% @doc
+%% Create a new partition.
+%% @end
+%%-------------------------------------------------------------------
+-spec newpartition(C::mpd_conn(), Name::string()) -> ok | {error, any_error()}.
+newpartition(C=#mpd_conn{}, Name) ->
+    parse_none(command(C, "newpartition", [Name])).
+
+%%-------------------------------------------------------------------
+%% @doc
+%% Delete a partition. The partition must be empty
+%% (no connected clients and no associated outputs).
+%% @end
+%%-------------------------------------------------------------------
+-spec delpartition(C::mpd_conn(), Name::string()) -> ok | {error, any_error()}.
+delpartition(C=#mpd_conn{}, Name) ->
+    parse_none(command(C, "delpartition", [Name])).
+
+%%-------------------------------------------------------------------
+%% @doc
+%% Move an output to the current partition.
+%% Unlike other output-control functions this one takes the name of
+%% the output rather than the ID.
+%% @end
+%%-------------------------------------------------------------------
+-spec moveoutput(C::mpd_conn(), Name::string()) -> ok | {error, any_error()}.
+moveoutput(C=#mpd_conn{}, Name) ->
+   parse_none(command(C, "moveoutput", [Name])).
 
 %%===================================================================
 %% Audio output devices
