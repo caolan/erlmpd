@@ -45,4 +45,5 @@ $(EBIN_DIR)/%.$(EMULATOR): %.erl
 $(DOC_DIR)/%.html: %.erl
 	$(ERL) -noshell -run edoc files $< -run init stop
 	@mkdir -p $(DOC_DIR)
-	mv *.html $(DOC_DIR)
+	-rm edoc-info
+	mv *.html *.css *.png $(DOC_DIR)
