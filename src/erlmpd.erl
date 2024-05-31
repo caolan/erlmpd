@@ -1325,7 +1325,7 @@ partition(C=#mpd_conn{}, Name) ->
 %% of the partition. Other properties may exist to contain
 %% information about the partition (as per the MPD protocol spec).
 %%
-%% Example return value: [[{partition,<<"default">>}]]
+%% Example return value: [[{partition,&lt;&lt;"default"&gt;&gt;}]]
 %% @end
 %%-------------------------------------------------------------------
 -spec listpartitions(C::mpd_conn()) -> [list()] | {error, any_error()}.
