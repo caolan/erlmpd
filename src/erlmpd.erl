@@ -329,7 +329,12 @@ idle(C=#mpd_conn{}) -> idle(C, []).
 %% @end
 %%-------------------------------------------------------------------
 -spec noidle(C::mpd_conn()) -> ok | {error, network_error()}.
-noidle(C=#mpd_conn{}) -> command(C, "noidle").
+noidle(C=#mpd_conn{}) ->
+    % It is not permitted to do gen_tcp:recv here because this may be in
+    % progress already. When using `command()`, it often returns {ealready}
+    % but on rare occasions “succeeds” and runs into a timeout. Hence ignore
+    % any response by MPD (none is expected here).
+    gen_tcp:send(C#mpd_conn.port, format_command("noidle", [])).
 
 %%-------------------------------------------------------------------
 %% @doc
