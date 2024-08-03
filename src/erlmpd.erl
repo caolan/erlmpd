@@ -34,7 +34,7 @@
 %% The music database
 -export([count/2, count/3, count_group/3, find/2, find/3, list/2, list/3,
          listall/1, listall/2, listallinfo/1, listallinfo/2,
-         lsinfo/1, lsinfo/2, search/3, update/1, update/2]).
+         lsinfo/1, lsinfo/2, search/3, search/2, update/1, update/2]).
 
 %% Stickers
 -export([sticker_delete/3, sticker_delete/4, sticker_list/3, sticker_get/4,
@@ -1176,6 +1176,16 @@ lsinfo(C=#mpd_conn{}, Uri) ->
 						list() | {error, any_error()}.
 search(C=#mpd_conn{}, Tag, What) ->
     parse_songs(command(C, "search", [atom_to_list(Tag), What])).
+
+%%-------------------------------------------------------------------
+%% @doc
+%% Searches songs in the db that match the given filter
+%% It is similar to find/2, but case-insensitive.
+%% @end
+%%-------------------------------------------------------------------
+-spec search(C::mpd_conn(), Filter::filter()) -> list() | {error, any_error()}.
+search(C, Filter) ->
+    parse_songs(command(C, "search", [ex_parse(Filter)])).
 
 %%-------------------------------------------------------------------
 %% @doc
