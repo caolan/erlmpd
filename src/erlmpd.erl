@@ -1618,12 +1618,12 @@ ex_parse_inner({land, Exprlist})            -> ex_and([ex_parse_inner(Ex) ||
 
 ex_tagop(Tag, OP, Value) ->
     ["(", atom_to_list(Tag), case OP of
-        eq          -> "==";
-        ne          -> "!=";
-        contains    -> "contains";
-        starts_with -> "starts_with";
-        match       -> "=~";
-        mismatch    -> "!~"
+        eq          -> " == ";
+        ne          -> " != ";
+        contains    -> " contains ";
+        starts_with -> " starts_with ";
+        match       -> " =~ ";
+        mismatch    -> " !~ "
     end, ex_quote(Value), ")"].
 
 ex_quote(Value) ->
