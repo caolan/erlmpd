@@ -48,7 +48,7 @@
          moveoutput/2]).
 
 %% Audio output devices
--export([disableoutput/2, enableoutput/2, outputs/1]).
+-export([disableoutput/2, enableoutput/2, toggleoutput/2, outputs/1]).
 
 %% Reflection
 -export([commands/1, notcommands/1, tagtypes/1, urlhandlers/1]).
@@ -1399,6 +1399,16 @@ disableoutput(C=#mpd_conn{}, OutputId) ->
 						ok | {error, any_error()}.
 enableoutput(C=#mpd_conn{}, OutputId) ->
     parse_none(command(C, "enableoutput", [integer_to_list(OutputId)])).
+
+%%-------------------------------------------------------------------
+%% @doc
+%% Toggles output with id OutputId
+%% @end
+%%-------------------------------------------------------------------
+-spec toggleoutput(C::mpd_conn(), OutputId::integer()) ->
+						ok | {error, any_error()}.
+toggleoutput(C=#mpd_conn{}, OutputId) ->
+    parse_none(command(C, "toggleoutput", [integer_to_list(OutputId)])).
 
 %%-------------------------------------------------------------------
 %% @doc
