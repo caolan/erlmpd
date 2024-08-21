@@ -38,7 +38,7 @@
 
 %% Stickers
 -export([sticker_delete/3, sticker_delete/4, sticker_list/3, sticker_get/4,
-         sticker_find/4, sticker_set/5]).
+         sticker_find/4, sticker_find/7, sticker_set/5]).
 
 %% Connection settings
 -export([close/1, kill/1, password/2, ping/1]).
@@ -68,7 +68,10 @@
 -type tag()           :: artist | albumartist | album | title | track | genre |
 				disc | date.
 
--type filter_op() :: eq | ne | contains | starts_with | match | mismatch.
+-type generic_op()    :: eq | contains | starts_with.
+-type filter_op()     :: generic_op() | ne | match | mismatch.
+%% Filter operators are used in filters of type tagop (see type filter()).
+%%
 %% <table cellpadding="2" cellspacing="0" border="1"><thead>
 %% <tr><th>Operator  </th><th>Protocol   </th><th>Description</th></tr>
 %% </thead><tbody>
@@ -122,6 +125,41 @@
 %% <tr><td>land</td><td>(EXPRESSION1 AND EXPRESSION 2...)</td><td>
 %%               Logical and of two or more filters</td></tr>
 %% </tbody></table>
+
+-type sticker_op()    :: generic_op() | lt | gt | str_eq | str_gt | str_lt.
+%% Sticker Operators follow slightly different interpretation compared to
+%% the ones used in filters. Additionally, only one sticker can be compared
+%% using an operator in a given sticker_find/7.
+%%
+%% <table cellpadding="2" cellspacing="0" border="1"><thead>
+%% <tr><th>Operator  </th><th>Protocol   </th><th>Description</th></tr>
+%% </thead><tbody>
+%% <tr><td>eq        </td><td>eq         </td>
+%%                        <td>Test for numeric equality</td></tr>
+%% <tr><td>lt        </td><td>lt         </td>
+%%                        <td>Test for numeric less than</td></tr>
+%% <tr><td>gt        </td><td>gt         </td>
+%%                        <td>Test for numeric greater than</td></tr>
+%% <tr><td>contains  </td><td>contains   </td>
+%%                        <td>Test for substring in any location</td></tr>
+%% <tr><td>starts_with</td><td>starts_with</td>
+%%                        <td>Test for substring at begin of value</td></tr>
+%% <tr><td>str_eq    </td><td>=</td>
+%%                        <td>Test for string equality</td></tr>
+%% <tr><td>str_gt  </td><td>&gt;</td>
+%%                        <td>Tests for lexicographical greater than</td></tr>
+%% <tr><td>str_lt  </td><td>&lt;</td>
+%%                        <td>Tests for lexicographical lower than</td></tr>
+%% </tbody></table>
+
+-type window_option()       :: {window, Start::integer(), End::integer()}.
+%% Certain MPD commands accept sort and window options to enforce a given
+%% output ordering for the results or that only a subset of the results is
+%% returned. When a command accepts this type as input, the empty list []
+%% or a proplist with at most one sort and one window option can be provided
+%% to make use of this feature.
+
+-type sticker_sort_option() :: {sort, uri | value | value_int}.
 
 %%===================================================================
 %% Exported functions not part of the MPD API
@@ -194,10 +232,7 @@ disconnect(C) ->
 -spec command(C::mpd_conn(), Command::string(), Args::list(),
 			Timeout::integer()) -> list() | {error, any_error()}.
 command(C=#mpd_conn{}, Command, Args, Timeout) ->
-    CommandStr = format_command(Command, Args),
-    %io:format("SENDING: ~p~n", [lists:flatten(ArgStr)]),
-    gen_tcp:send(C#mpd_conn.port, CommandStr),
-    receive_lines(C#mpd_conn.port, Timeout).
+    command(C, Command, Args, Timeout, "").
 
 %%-------------------------------------------------------------------
 %% @doc
@@ -1264,6 +1299,28 @@ sticker_find(C=#mpd_conn{}, Type, Uri, Name) ->
 
 %%-------------------------------------------------------------------
 %% @doc
+%% Like sticker_find/4 but additionally allows specifying exactly one
+%% operator to compare the sticker against and also offers search
+%% ordering and pagination capabilities.
+%% @end
+%%-------------------------------------------------------------------
+-spec sticker_find(C::mpd_conn(), Type::string(), Uri::string(),
+		Name::string(), Op::sticker_op(), CompareValue::string(),
+		Options::[window_option() | sticker_sort_option()]) ->
+		[[{atom(), string()}]] | {error, any_error()}.
+sticker_find(C=#mpd_conn{}, Type, Uri, Name, Op, CompareValue, Options) ->
+    OpString = case Op of
+        str_eq -> "=";
+        str_gt -> ">";
+        str_lt -> "<";
+        _Other -> atom_to_list(Op) % eq, lt, gt, contains, starts_with
+    end,
+    parse_stickers(command(C, "sticker find", [Type, Uri, Name], ?TIMEOUT,
+        [" ", OpString, " ", escape_arg(CompareValue),
+         sort_window_options_to_string(Options)])).
+
+%%-------------------------------------------------------------------
+%% @doc
 %% Delete specific sticker by Type, URI and Name.
 %% @end
 %%-------------------------------------------------------------------
@@ -1464,6 +1521,12 @@ urlhandlers(C=#mpd_conn{}) ->
 %% Internal Functions
 %%===================================================================
 
+command(C=#mpd_conn{}, Command, Args, Timeout, RawArgs) ->
+    CommandStr = format_command(Command, Args, RawArgs),
+    %io:format("SENDING: ~p~n", [lists:flatten(CommandStr)]),
+    gen_tcp:send(C#mpd_conn.port, CommandStr),
+    receive_lines(C#mpd_conn.port, Timeout).
+
 escape_quotes(X) ->
     string:replace(string:replace(X, "\\", "\\\\", all), "\"", "\\\"", all).
 
@@ -1617,8 +1680,14 @@ convert_song(Data) ->
     convert_props([{integer, ['Id', 'Pos', 'Time', 'Track', 'Disc']}], Data).
 
 format_command(Command, Args) ->
-    Args2 = [io_lib:format("\"~s\"", [escape_quotes(X)]) || X <- Args],
-    io_lib:format("~s ~s~n", [Command, string:join(Args2, " ")]).
+    format_command(Command, Args, "").
+format_command(Command, Args, RawArgs) ->
+    io_lib:format("~s ~s~s~n", [Command,
+				string:join([escape_arg(X) || X <- Args], " "),
+				RawArgs]).
+
+escape_arg(X) ->
+    io_lib:format("\"~s\"", [escape_quotes(X)]).
 
 % FILTER expressions
 ex_parse(Expr) ->
@@ -1659,3 +1728,14 @@ ex_audio_format_match(Value) -> ["(AudioFormat =~ ", ex_quote(Value), ")"].
 ex_prio_ge(Value)            -> ["(prio >= ", integer_to_list(Value), ")"].
 ex_not(Expr)                 -> ["(!", Expr, ")"].
 ex_and(Expr)                 -> ["(", lists:join(" AND ", Expr), ")"].
+
+sort_window_options_to_string(Options) ->
+    LS = case proplists:get_value(window, Options) of
+         undefined    -> "";
+         {Start, End} -> io_lib:format(" window \"~w:~w\"", Start, End)
+         end,
+    case proplists:get_value(sort, Options) of
+         undefined -> LS;
+         Type      -> io_lib:format(" sort \"~s\"~s",
+                                    [escape_quotes(atom_to_list(Type)), LS])
+    end.
