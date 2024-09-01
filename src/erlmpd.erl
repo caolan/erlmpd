@@ -32,9 +32,10 @@
          rename/3, rm/2, save/2]).
 
 %% The music database
--export([count/2, count/3, count_group/3, find/2, find/3, list/2, list/3,
-         listall/1, listall/2, listallinfo/1, listallinfo/2,
-         lsinfo/1, lsinfo/2, search/3, search/2, update/1, update/2]).
+-export([albumart/2, count/2, count/3, count_group/3, find/2, find/3,
+	list/2, list/3, listall/1, listall/2, listallinfo/1, listallinfo/2,
+	lsinfo/1, lsinfo/2, readpicture/2, search/3, search/2,
+	update/1, update/2]).
 
 %% Stickers
 -export([sticker_delete/3, sticker_delete/4, sticker_list/3, sticker_get/4,
@@ -1053,6 +1054,22 @@ save(C=#mpd_conn{}, Name) ->
 %%===================================================================
 %%-------------------------------------------------------------------
 %% @doc
+%% Queries the album art for the given song and returns an iolist
+%% with the file contents.
+%%
+%% The first part of a successful return value for this function is
+%% always 'unknown'. This could later be replaced by a MIME-type if
+%% MPD gains support for this.
+%% @end
+%%-------------------------------------------------------------------
+-spec albumart(C::mpd_conn(), URI::string()) ->
+			{unknown, iolist()} | {error, any_error() | enosize}.
+albumart(C=#mpd_conn{}, URI) ->
+    pass_errors(command_binary(C, "albumart", [URI], 0, [], []),
+                fun({_Metadata, Bin}) -> {unknown, Bin} end).
+
+%%-------------------------------------------------------------------
+%% @doc
 %% Counts the number of songs and their total playtime in the db
 %% matching the filter
 %% @end
@@ -1201,6 +1218,28 @@ lsinfo(C=#mpd_conn{}) ->
 -spec lsinfo(C::mpd_conn(), Uri::string()) -> list() | {error, any_error()}.
 lsinfo(C=#mpd_conn{}, Uri) ->
     parse_database(command(C, "lsinfo", [Uri])).
+
+%%-------------------------------------------------------------------
+%% @doc
+%% Queries the picture for the given song and returns an iolist
+%% with the file contents.
+%%
+%% The first part of a successful return value for this function is
+%% either the atom unknown or a string with the MIME type of the
+%% file if this was provied by MPD.
+%%
+%% Note that the iolist is empty in event that MPD doesn't have any
+%% album art associated to the given URI but the command executed
+%% syuccessfully.
+%% @end
+%%-------------------------------------------------------------------
+-spec readpicture(C::mpd_conn(), URI::string()) ->
+		{unknown | binary(), iolist()} | {error, any_error() | enosize}.
+readpicture(C=#mpd_conn{}, URI) ->
+    pass_errors(command_binary(C, "readpicture", [URI], 0, [], []),
+                fun({Metadata, Bin}) ->
+                    {proplists:get_value(type, Metadata, unknown), Bin}
+                end).
 
 %%-------------------------------------------------------------------
 %% @doc
@@ -1530,14 +1569,30 @@ command(C=#mpd_conn{}, Command, Args, Timeout, RawArgs) ->
 escape_quotes(X) ->
     string:replace(string:replace(X, "\\", "\\\\", all), "\"", "\\\"", all).
 
-receive_lines(Sock, Timeout) -> receive_lines(Sock, Timeout, []).
-receive_lines(Sock, Timeout, L) ->
+receive_lines(Sock, Timeout) -> receive_lines(Sock, Timeout, [], no_binary).
+receive_lines(Sock, Timeout, L, B) ->
     R = gen_tcp:recv(Sock, 0, Timeout),
     %io:format("RECEIVED: ~p~n", [R]),
     case R of
-        {ok, "OK\n"} -> L;
-        {ok, "ACK " ++ AckResp} -> {error, parse_mpd_error(AckResp)};
-        {ok, Resp} -> receive_lines(Sock, Timeout, L ++ [Resp -- "\n"]);
+        {ok, "OK\n"} ->
+            case B of
+            no_binary -> L;
+            Cnt       -> {L, Cnt}
+            end;
+        {ok, "ACK " ++ AckResp} ->
+            {error, parse_mpd_error(AckResp)};
+        {ok, "binary: " ++ ChunkSizeStr} ->
+            {ChunkSize, _Drop} = string:to_integer(ChunkSizeStr),
+            ok = inet:setopts(Sock, [{packet, raw}, {mode, binary}]),
+            R2 = gen_tcp:recv(Sock, ChunkSize + 1, Timeout),
+            ok = inet:setopts(Sock, [{packet, line}, {mode, list}]),
+            case R2 of
+            {ok,    Data}   -> receive_lines(Sock, Timeout, L,
+                                             binary:part(Data, 0, ChunkSize));
+            {error, Error2} -> {error, Error2}
+            end;
+        {ok, Resp} ->
+            receive_lines(Sock, Timeout, L ++ [Resp -- "\n"], B);
         {error, Error} -> {error, Error}
     end.
 
@@ -1688,6 +1743,37 @@ format_command(Command, Args, RawArgs) ->
 
 escape_arg(X) ->
     io_lib:format("\"~s\"", [escape_quotes(X)]).
+
+command_binary(C=#mpd_conn{}, Command, Args, Offset0, Results0, Bin0) ->
+    CmdStr = format_command(Command, Args ++ [integer_to_list(Offset0)], []),
+    %io:format("SENDING: ~p~n", [lists:flatten(CmdStr)]),
+    gen_tcp:send(C#mpd_conn.port, CmdStr),
+    pass_errors(receive_lines(C#mpd_conn.port, ?TIMEOUT), fun(Out) ->
+        case Out of
+        {Results, Bin} ->
+            pass_errors(convert_props([{integer, [size]}], parse_pairs(Results)),
+                        fun(Metadata) ->
+                Results1 = lists:foldl(fun(Ent={Key, _Value}, Acc) ->
+                               case proplists:is_defined(Key, Acc) of
+                               true  -> Acc;
+                               false -> [Ent|Acc]
+                               end
+                           end, Results0, Metadata),
+                Bin1 = [Bin0|Bin],
+                IOSZ = iolist_size(Bin1),
+                case proplists:get_value(size, Results1) of
+                undefined ->
+                    {error, enosize};
+                Size when Size =< IOSZ ->
+                    {Results1, Bin1};
+                _Size ->
+                    command_binary(C, Command, Args, IOSZ, Results1, Bin1)
+                end
+            end);
+        Results ->
+            {Results, <<>>}
+        end
+    end).
 
 % FILTER expressions
 ex_parse(Expr) ->
