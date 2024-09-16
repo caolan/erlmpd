@@ -1,3 +1,5 @@
+NOTE: This library is no longer maintained. You might prefer to use the modernised fork of this library maintained by Ma_Sys.ma: https://masysma.net/32/erlmpd.xhtml
+
 A simple client library for communicating with MPD (http://mpd.wikia.com) - "a flexible, powerful, server-side application for playing music"
 
 To build just run make, this will create a doc directory which should contain a useful reference to the functions exported by the erlmpd module.
