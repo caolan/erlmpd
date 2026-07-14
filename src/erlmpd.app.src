@@ -1,0 +1,13 @@
+{application, erlmpd,
+ [{description, "A simple client library for communicating with MPD"},
+  {vsn, "1.0.0"},
+  {registered, []},
+  {applications,
+   [kernel,
+    stdlib
+   ]},
+  {env,[]},
+  {modules, []},
+  {licenses, ["GPL-3.0+"]},
+  {links, []}
+ ]}.
